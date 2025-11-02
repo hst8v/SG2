@@ -1,3 +1,11 @@
+#Language: Python 3
+#IDE used: Thonny, GitHub Web IDE, and VS code
+#Team: Robert Ford, Joel Jefferson, Elisa Reyes, Hannah Smid
+#Project Info: Class: 4500 | Project: SG2| Date: 11/02/2025
+#Purpose: The purpose of this project is to build off 
+#the previous SG1 project and add cordance and 3 extra lists.
+
+
 import re
 import os
 import sys
@@ -156,10 +164,11 @@ def print_search_history_summary(search_history, file_order):
 # Main Program Logic
 
 def main():
-    intro = (
-        "SG1: Word-count & Search Tool\n"
+    intro = ( #updated the intro for the SG2
+        "SG2: Word count, Search, Cordance, and Extra Lists\n"
         "This program reads up to 10 text files (.TXT), parses words (letters and optional internal hyphens),\n"
         "reports per-file totals and distinct counts, and lets you search words across the files (case-insensitive).\n"
+        "This program also adds a CORDANCE.TXT and ExtraLists.txt with three formated list"
     )
     print(intro)
     # Containers
