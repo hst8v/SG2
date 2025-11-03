@@ -160,7 +160,20 @@ def print_search_history_summary(search_history, file_order):
             row_parts.append(f"{str(counts.get(f,0)):>{fname_widths[f]}}")
         print("  ".join(row_parts))
     print()
+    
+# Open File Logic
 
+def openFile(words):
+    txtfile = "CONCORDANCE.txt"
+    content = sorted(words)
+    try:
+        with open(txtfile, 'w', encoding='utf-8') as file:
+            for item in content:
+                file.write(f"{item}\n")
+            print(f"File '{txtfile}' created and written to successfully.")
+    except IOError as e:
+        print(f"Error writing to file '{txtfile}': {e}")
+        
 # Main Program Logic
 
 def main():
@@ -211,6 +224,8 @@ def main():
         file_list.append(raw_fname)
         print(f"Loaded '{raw_fname}' with {len(words)} words ({len(set(normalize_word(w) for w in words))} distinct).")
 
+        openFile(words) #stores words in alphabetival order
+        
         # If reached max files, stop asking
         if len(file_list) >= MAX_FILES:
             print(f"Reached maximum of {MAX_FILES} files.")
