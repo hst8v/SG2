@@ -174,6 +174,70 @@ def openFile(words):
     except IOError as e:
         print(f"Error writing to file '{txtfile}': {e}")
         
+
+#This will return the first word on line for split words
+def _first_word_on_line(line: str):
+   word = ""
+   started = False
+   for ch in line.strip():
+       if ch.isalpha() or ch == "-":
+           word += ch
+           started = True
+       elif started:
+           break
+   return word.lower() if word else None
+
+#This will take the test files and make inti lowercase words per line.
+#This also combines the hyphenated word into a singular word
+#Howevre it keeps internal hiphens and returns a list
+def split_file_into_lines(file_name):
+
+
+   with open(file_name, "r", encoding="utf-8") as file:
+       text = file.read()
+   text = combine_hyphens(text)
+   lines = text.splitlines()
+
+
+   words_by_line = []
+   skip_next_word = False 
+
+
+   for i, line_text in enumerate(lines):
+       words_here = [w.lower() for w in _word_pattern.findall(line_text)]
+
+
+       if skip_next_word and words_here:
+           words_here = words_here[1:]
+           skip_next_word = False
+
+
+       if line_text.rstrip().endswith("-") and i + 1 < len(lines):
+           next_line = lines[i + 1]
+           next_words = [w.lower() for w in _word_pattern.findall(next_line)]
+
+
+           if next_words:
+               base_part = re.sub(r"[^A-Za-z]", "", line_text.split()[-1][:-1]).lower()
+               merged_word = base_part + next_words[0]
+               if words_here:
+                   words_here[-1] = merged_word
+               else:
+                   words_here.append(merged_word)
+               skip_next_word = True
+
+
+       words_by_line.append(words_here)
+
+
+   return words_by_line
+
+
+# help enforce the hyphen to be considered as appearing before the letter a in SG2 reuiremnts
+def sort_key_for_word(word):
+   adjusted = word.lower().replace("-", "\x00")
+   return tuple(adjusted)
+
 # Main Program Logic
 
 def main():
