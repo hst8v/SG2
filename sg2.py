@@ -4,6 +4,7 @@
 #Project Info: Class: 4500 | Project: SG2| Date: 11/02/2025
 #Purpose: The purpose of this project is to build off 
 #the previous SG1 project and add cordance and 3 extra lists.
+#Resources: W3School.com | realpython.com | learnpython.com
 
 
 import re
@@ -191,8 +192,6 @@ def _first_word_on_line(line: str):
 #This also combines the hyphenated word into a singular word
 #Howevre it keeps internal hiphens and returns a list
 def split_file_into_lines(file_name):
-
-
    with open(file_name, "r", encoding="utf-8") as file:
        text = file.read()
    text = combine_hyphens(text)
@@ -237,6 +236,85 @@ def split_file_into_lines(file_name):
 def sort_key_for_word(word):
    adjusted = word.lower().replace("-", "\x00")
    return tuple(adjusted)
+
+
+#This variable it to build the concordance it will be able to return
+#Condance which will consit of one long list that will contain all the 
+#words in all the user indicated files
+def build_concordance(file_list):
+    concordance = {}
+    files_word_sets = []
+
+    for file_index, filename in enumerate(file_list, start=1):
+        line_words = split_file_into_lines(filename)
+        file_unique_words = set()
+
+        for line_number, words_on_line in enumerate(line_words, start=1):
+            for word_number, word in enumerate(words_on_line, start=1):
+                file_unique_words.add(word)
+                if word not in concordance:
+                    concordance[word] = []
+                concordance[word].append((file_index, line_number, word_number))
+
+        files_word_sets.append(file_unique_words)
+
+    for word, positions in concordance.items():
+        positions.sort()
+
+    return concordance, files_word_sets
+
+
+#This will print the concordance and transfer the text to the
+#CONCORDANCE.TXT file
+#Used this site as a resource: https://realpython.com/python-sort
+#Used this site as a resource: https://learnpython.com/blog/python-custom-sort-function
+def print_and_write_concordance(concordance):
+    sorted_words = sorted(concordance.keys(), key=sort_key_for_word)
+    out_lines = []
+
+    for word in sorted_words:
+        positions = []
+        for (file_num, line_num, word_num) in concordance[word]:
+            positions.append(f"{file_num}.{line_num}.{word_num}")
+        formatted_positions = "; ".join(positions) + "."
+        out_lines.append(f"{word} {formatted_positions}")
+
+    print("\nConcordance (also written to CONCORDANCE.TXT):")
+    for entry in out_lines:
+        print(entry)
+
+    with open("CONCORDANCE.TXT", "w", encoding="utf-8") as f:
+        for entry in out_lines:
+            f.write(entry + "\n")
+
+
+#This will be to format the table accoridng to the SG2 specifications
+#Used this site as a resource: https://learnpython.com/blog/python-custom-sort-function
+def align_table(rows, headers=None):
+    str_rows = [[str(c) for c in row] for row in rows]
+    if headers:
+        str_rows.insert(0, headers)
+
+    num_cols = len(str_rows[0]) if str_rows else 0
+    widths = [0] * num_cols
+    for row in str_rows:
+        for i, cell in enumerate(row):
+            widths[i] = max(widths[i], len(cell))
+
+    fmt = " ".join(f"{{:>{w}}}" for w in widths)
+
+    out = []
+    if headers:
+        out.append(fmt.format(*headers))
+        out.append("-" * (sum(widths) + (len(widths) - 1)))
+        data_rows = str_rows[1:]
+    else:
+        data_rows = str_rows
+
+    for row in data_rows:
+        out.append(fmt.format(*row))
+    return out
+
 
 # Main Program Logic
 
