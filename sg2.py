@@ -4,12 +4,13 @@
 #Project Info: Class: 4500 | Project: SG2| Date: 11/02/2025
 #Purpose: The purpose of this project is to build off 
 #the previous SG1 project and add cordance and 3 extra lists.
-#Resources: W3School.com | realpython.com | learnpython.com
+#Resources: W3School.com | realpython.com | learnpython.com | stackoverflow.com
 
 
 import re
 import os
 import sys
+from collections import defaultdict
 
 # Helper / Core Functions
 
@@ -99,8 +100,7 @@ def print_file_summary(file_order, word_data):
     """
     Print a formatted table with columns:
       Filename | Total words | Distinct words
-    Right-justified columns, preserve file_order list.
-
+    -justified columns, preserve file_order list.
     - file_order: list of filenames in the order they were entered
     - word_data: dictionary where:
         key = filename (string)
@@ -183,7 +183,7 @@ def openFile(words):
         
 
 #This will return the first word on line for split words
-def _first_word_on_line(line: str):
+def first_word(line: str):
    word = ""
    started = False
    for ch in line.strip():
@@ -197,46 +197,38 @@ def _first_word_on_line(line: str):
 #This will take the test files and make inti lowercase words per line.
 #This also combines the hyphenated word into a singular word
 #Howevre it keeps internal hiphens and returns a list
-def split_file_into_lines(file_name):
-   with open(file_name, "r", encoding="utf-8") as file:
-       text = file.read()
-   text = combine_hyphens(text)
-   lines = text.splitlines()
+#Resource used for this: https://stackoverflow.com/questions/54404158/regex-joining-words-splitted-by-whitespace-and-hyphen
+def split_file(file_name):
+    with open(file_name, "r", encoding="utf-8") as file:
+        lines = file.read().splitlines()
 
+    words_per_line = []
+    drop_first_next = False 
 
-   words_by_line = []
-   skip_next_word = False 
+    for i, line_text in enumerate(lines):
 
+        words_here = [w.lower() for w in WORD_RE.findall(line_text)]
 
-   for i, line_text in enumerate(lines):
-       words_here = [w.lower() for w in _word_pattern.findall(line_text)]
+        if drop_first_next and words_here:
+            words_here = words_here[1:]
+            drop_first_next = False
 
+        if line_text.rstrip().endswith("-") and i + 1 < len(lines):
+            next_first = first_word(lines[i + 1])
+            if next_first:
+                m = re.search(r"([A-Za-z]+)-\s*$", line_text)
+                if m:
+                    stem = m.group(1).lower()
+                    merged = stem + next_first
+                    if words_here and words_here[-1].startswith(stem):
+                        words_here[-1] = merged
+                    else:
+                        words_here.append(merged)
+                    drop_first_next = True
 
-       if skip_next_word and words_here:
-           words_here = words_here[1:]
-           skip_next_word = False
+        words_per_line.append(words_here)
 
-
-       if line_text.rstrip().endswith("-") and i + 1 < len(lines):
-           next_line = lines[i + 1]
-           next_words = [w.lower() for w in _word_pattern.findall(next_line)]
-
-
-           if next_words:
-               base_part = re.sub(r"[^A-Za-z]", "", line_text.split()[-1][:-1]).lower()
-               merged_word = base_part + next_words[0]
-               if words_here:
-                   words_here[-1] = merged_word
-               else:
-                   words_here.append(merged_word)
-               skip_next_word = True
-
-
-       words_by_line.append(words_here)
-
-
-   return words_by_line
-
+    return words_per_line
 
 # help enforce the hyphen to be considered as appearing before the letter a in SG2 reuiremnts
 def sort_key_for_word(word):
@@ -252,7 +244,7 @@ def build_concordance(file_list):
     files_word_sets = []
 
     for file_index, filename in enumerate(file_list, start=1):
-        line_words = split_file_into_lines(filename)
+        line_words = split_file(filename)
         file_unique_words = set()
 
         for line_number, words_on_line in enumerate(line_words, start=1):
@@ -433,6 +425,9 @@ def main():
 
     # Final summary
     print_search_history_summary(search_history, file_list)
+
+    concordance, files_word_sets = build_concordance(file_list)              
+    print_and_write_concordance(concordance)                                   
 
     # Finish
     prompt_input("Program finished. Press ENTER to exit.")
