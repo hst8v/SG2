@@ -100,13 +100,18 @@ def print_file_summary(file_order, word_data):
     Print a formatted table with columns:
       Filename | Total words | Distinct words
     Right-justified columns, preserve file_order list.
+
+    - file_order: list of filenames in the order they were entered
+    - word_data: dictionary where:
+        key = filename (string)
+        value = list of all words extracted from that file
     """
     # Compute values
     rows = []
     for fname in file_order:
-        words = word_data[fname]
-        total = len(words)
-        distinct = len(set(normalize_word(w) for w in words))
+        words = word_data[fname] # Get the list of words for this file
+        total = len(words) # Count all words (including duplicates)
+        distinct = len(set(normalize_word(w) for w in words)) # Count unique words (case-insensitive)
         rows.append((fname, total, distinct))
     # Determine column widths
     max_fname_len = max((len(r[0]) for r in rows), default=8)
@@ -135,6 +140,7 @@ def print_search_results_for_word(word, results):
 
 def print_search_history_summary(search_history, file_order):
     #search_history: list of tuples (legal_word, {filename: count})
+    #file_order: list of filenames to determine column order
     #Prints a table: rows = words, columns = filenames
 
     if not search_history:
@@ -142,10 +148,10 @@ def print_search_history_summary(search_history, file_order):
         return
     # Prepare header
     words = [entry[0] for entry in search_history]
-    # Column widths
+    # Calculate column widths for proper formatting
     max_word_len = max(len("Word"), max((len(w) for w in words), default=4))
     fname_widths = {f: max(len(f), 5) for f in file_order}
-    # header
+    # Build and print header
     header_parts = [f"{'Word':<{max_word_len}}"]
     for f in file_order:
         header_parts.append(f"{f:>{fname_widths[f]}}")
@@ -154,7 +160,7 @@ def print_search_history_summary(search_history, file_order):
     print("Summary of searched words across files:")
     print(header_line)
     print('-' * len(header_line))
-    # rows
+    # Print data rows - each row shows one word's counts across all files
     for word, counts in search_history:
         row_parts = [f"{word:<{max_word_len}}"]
         for f in file_order:
@@ -327,13 +333,15 @@ def main():
     )
     print(intro)
     # Containers
+    # file_list: list to store filenames in the order they were entered
+    # word_data: dictionary that maps filename -> list of all words extracted from that file
     file_list = []
     word_data = {}  # filename -> list of words (original order)
     MAX_FILES = 10
 
     #  File input loop 
     while len(file_list) < MAX_FILES:
-        raw_fname = prompt_input("Enter a .TXT filename (in same directory as this script): ").strip()
+        raw_fname = prompt_input("Enter a .TXT filename (in same directory as this script): ").strip() #get filename
         if not is_txt_filename(raw_fname):
             print("Filename must end with .TXT (case-insensitive). Please try again.")
             continue
@@ -352,16 +360,17 @@ def main():
         # Try opening and parsing
         try:
             with open(raw_fname, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
+                lines = f.readlines() # Read all lines into a list
         except Exception as e:
             print(f"Error opening file '{raw_fname}': {e}")
             continue
 
         # Preprocess lines to handle line-break hyphen rules
         combined_text = parse_text_handling_line_hyphens(lines)
-        # Extract words
+        # Extract valid words from the processed text
         words = extract_words_from_text(combined_text)
         # Store
+        # word_data dictionary stores the list of words for this filename
         word_data[raw_fname] = words
         file_list.append(raw_fname)
         print(f"Loaded '{raw_fname}' with {len(words)} words ({len(set(normalize_word(w) for w in words))} distinct).")
@@ -386,18 +395,18 @@ def main():
     print_file_summary(file_list, word_data)
 
     #  Word search loop 
-    search_history = []
+    search_history = [] # Stores search queries and results for final summary
     while True:
         # Prompt for LegalWord
         # LegalCharacters = 'abcdefghijklmnopqrstuvwxyz-'
         while True:
-            candidate = prompt_input("Enter a word to search (letters and hyphen allowed): ").strip()
+            candidate = prompt_input("Enter a word to search (letters and hyphen allowed): ").strip() 
             if candidate == "":
                 print("Empty input not allowed; please enter a legal word.")
                 continue
             # Validate: must match pattern ^[A-Za-z]+(?:-[A-Za-z]+)*$
             if WORD_RE.fullmatch(candidate):
-                legal_word = candidate
+                legal_word = candidate # the legal word to search
                 break
             else:
                 # find first problematic character/index for helpful message
@@ -405,12 +414,12 @@ def main():
                 print("Please try again.")
 
         # Count occurrences in each file
-        lw_norm = normalize_word(legal_word)
-        results = {}
+        lw_norm = normalize_word(legal_word) 
+        results = {} # Dictionary to store filename
         for fname in file_list:
-            words = word_data[fname]
-            cnt = sum(1 for w in words if normalize_word(w) == lw_norm)
-            results[fname] = cnt
+            words = word_data[fname] # Get the word list for this file
+            cnt = sum(1 for w in words if normalize_word(w) == lw_norm)  # Count occurrences
+            results[fname] = cnt # Store count
 
         # Display results
         print_search_results_for_word(legal_word, results)
