@@ -11,6 +11,7 @@ import re
 import os
 import sys
 from collections import defaultdict
+from collections import Counter
 
 # Helper / Core Functions
 
@@ -170,7 +171,7 @@ def print_search_history_summary(search_history, file_order):
     
 # Open File Logic
 
-def openFile(words):
+def openCFile(words):
     txtfile = "CONCORDANCE.txt"
     content = sorted(words)
     try:
@@ -181,6 +182,16 @@ def openFile(words):
     except IOError as e:
         print(f"Error writing to file '{txtfile}': {e}")
         
+def openEFile(words):
+    txtfile = "EXTRALISTS.txt"
+    content = sorted(words)
+    try:
+        with open(txtfile, 'w', encoding='utf-8') as file:
+            for item in content:
+                file.write(f"{item}\n")
+            print(f"File '{txtfile}' created and written to successfully.")
+    except IOError as e:
+        print(f"Error writing to file '{txtfile}': {e}")      
 
 #This will return the first word on line for split words
 def first_word(line: str):
@@ -280,12 +291,74 @@ def print_and_write_concordance(concordance):
     print("\nConcordance (also written to CONCORDANCE.TXT):")
     for entry in out_lines:
         print(entry)
-
+        
     with open("CONCORDANCE.TXT", "w", encoding="utf-8") as f:
         for entry in out_lines:
             f.write(entry + "\n")
+    top_ten_list(out_lines)
+    
+#Part 2 of the project
+def top_ten_list(out_lines):
+    sorted_words = sorted(out_lines, key=len, reverse=True)
+    count = 0
+    print("\nTop Ten Used Words (written to EXTRALISTS.TXT):")
+    for entry in sorted_words:
+        count+=1
+        print(entry)
+        if count ==10:
+            break
+    count = 0
+    with open("EXTRALISTS.TXT", "w", encoding="utf-8") as f:
+        f.write("Top Ten Used Words:\n")
+        for entry in sorted_words:
+            count+=1
+            f.write(entry + "\n")
+            if count ==10:
+                break
+        f.write("\n")
+        
+#Part 3 of the project
+def word_in_every_file(file_list):
+    nonDistinct = None
+    for file in file_list:
+        with open(file, "r", encoding="utf-8") as f:
+            words = set(f.read().split())
+            if nonDistinct is None:
+                nonDistinct = words
+            else:
+                nonDistinct &= words
 
-
+    print("\nWords in Every File (written to EXTRALISTS.TXT):")
+    for word in sorted(nonDistinct):
+        print(word)
+    
+    with open("EXTRALISTS.TXT", "a", encoding="utf-8") as f:
+        f.write("Words that Appear in Every File: \n")
+        for word in sorted(nonDistinct):
+            f.write(word + "\n")
+        f.write("\n")    
+#Part 4 of the project
+def distinct_list(file_list):
+    file_comp_count = Counter()
+    distinct_words = set()
+    for file in file_list:
+        with open(file, "r", encoding="utf-8") as f:
+            text = f.read()
+            words = set(match.group(0).lower() for match in WORD_RE.finditer(text))
+            distinct_words.update(words)
+            file_comp_count.update(words)
+ 
+    unique = [word for word, count in file_comp_count.items() if count == 1]
+    
+    print("\nDistinct Words (written to EXTRALISTS.TXT):")
+    for word in sorted(unique):
+        print(unique)
+        
+    with open("EXTRALISTS.TXT", "a", encoding="utf-8") as f:
+        f.write("Distinct Words: \n")
+        for word in sorted(unique):
+            f.write(word + "\n")
+            
 #This will be to format the table accoridng to the SG2 specifications
 #Used this site as a resource: https://learnpython.com/blog/python-custom-sort-function
 def align_table(rows, headers=None):
@@ -367,8 +440,8 @@ def main():
         file_list.append(raw_fname)
         print(f"Loaded '{raw_fname}' with {len(words)} words ({len(set(normalize_word(w) for w in words))} distinct).")
 
-        openFile(words) #stores words in alphabetival order
-        
+        openCFile(words) #stores words in alphabetival order
+        openEFile(words)
         # If reached max files, stop asking
         if len(file_list) >= MAX_FILES:
             print(f"Reached maximum of {MAX_FILES} files.")
@@ -427,8 +500,10 @@ def main():
     print_search_history_summary(search_history, file_list)
 
     concordance, files_word_sets = build_concordance(file_list)              
-    print_and_write_concordance(concordance)                                   
-
+    print_and_write_concordance(concordance)
+    word_in_every_file(file_list)
+    distinct_list(file_list)
+    
     # Finish
     prompt_input("Program finished. Press ENTER to exit.")
     print("Goodbye.")
