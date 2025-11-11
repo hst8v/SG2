@@ -132,7 +132,6 @@ def print_file_summary(file_order, word_data):
 
 def print_search_results_for_word(word, results):
     #results is dict filename -> count
-    
     print()
     print(f"Results for word '{word}':")
     for fname, cnt in results.items():
@@ -169,29 +168,6 @@ def print_search_history_summary(search_history, file_order):
         print("  ".join(row_parts))
     print()
     
-# Open File Logic
-
-def openCFile(words):
-    txtfile = "CONCORDANCE.txt"
-    content = sorted(words)
-    try:
-        with open(txtfile, 'w', encoding='utf-8') as file:
-            for item in content:
-                file.write(f"{item}\n")
-            print(f"File '{txtfile}' created and written to successfully.")
-    except IOError as e:
-        print(f"Error writing to file '{txtfile}': {e}")
-        
-def openEFile(words):
-    txtfile = "EXTRALISTS.txt"
-    content = sorted(words)
-    try:
-        with open(txtfile, 'w', encoding='utf-8') as file:
-            for item in content:
-                file.write(f"{item}\n")
-            print(f"File '{txtfile}' created and written to successfully.")
-    except IOError as e:
-        print(f"Error writing to file '{txtfile}': {e}")      
 
 #This will return the first word on line for split words
 def first_word(line: str):
@@ -242,7 +218,7 @@ def split_file(file_name):
     return words_per_line
 
 # help enforce the hyphen to be considered as appearing before the letter a in SG2 reuiremnts
-def sort_key_for_word(word):
+def sort_key(word):
    adjusted = word.lower().replace("-", "\x00")
    return tuple(adjusted)
 
@@ -278,7 +254,7 @@ def build_concordance(file_list):
 #Used this site as a resource: https://realpython.com/python-sort
 #Used this site as a resource: https://learnpython.com/blog/python-custom-sort-function
 def print_and_write_concordance(concordance):
-    sorted_words = sorted(concordance.keys(), key=sort_key_for_word)
+    sorted_words = sorted(concordance.keys(), key=sort_key)
     out_lines = []
 
     for word in sorted_words:
@@ -295,27 +271,7 @@ def print_and_write_concordance(concordance):
     with open("CONCORDANCE.TXT", "w", encoding="utf-8") as f:
         for entry in out_lines:
             f.write(entry + "\n")
-    top_ten_list(out_lines)
     
-#Part 2 of the project
-def top_ten_list(out_lines):
-    sorted_words = sorted(out_lines, key=len, reverse=True)
-    count = 0
-    print("\nTop Ten Used Words (written to EXTRALISTS.TXT):")
-    for entry in sorted_words:
-        count+=1
-        print(entry)
-        if count ==10:
-            break
-    count = 0
-    with open("EXTRALISTS.TXT", "w", encoding="utf-8") as f:
-        f.write("Top Ten Used Words:\n")
-        for entry in sorted_words:
-            count+=1
-            f.write(entry + "\n")
-            if count ==10:
-                break
-        f.write("\n")
         
 #Part 3 of the project
 def word_in_every_file(file_list):
@@ -387,14 +343,95 @@ def align_table(rows, headers=None):
     return out
 
 
+#This will summarize where and how often each word appears across all the files
+def file_stats(concordance, file_count):
+    totals = {}
+    filesets = {}
+    for w, positions in concordance.items():
+        totals[w] = len(positions)
+        filesets[w] = {f for (f, _ln, _wn) in positions}
+    return totals, filesets
+
+#This is used to sort the top ten words that user input from files
+def top_ten_sorting(word, totals):
+    return (-totals[word], sort_key(word))  # negative total for descending
+
+#Printing the outputs to both the user and files
+def print_output(lines, sink): 
+    for ln in lines:
+        print(ln)
+        sink.append(ln)
+
+#This function will buidl all three of the extra list and output them onto the
+#screen as well we to the ExtraList.txt
+def write_extra_lists(concordance, file_order):
+    file_count = len(file_order)
+    totals, filesets = file_stats(concordance, file_count)
+
+    all_words = list(concordance.keys())
+    all_words.sort(key=lambda w: top_ten_sorting(w, totals))
+    top10 = all_words[:10] if len(all_words) >= 10 else all_words
+
+    top_rows = []
+    for w in top10:
+        top_rows.append([w, totals[w], len(filesets[w])])
+
+    top_header = ["Word", "Occurrences", "Files"]
+    top_lines = []
+    print("\nTop Ten Words (by total occurrences):")
+    formatted = align_table(top_rows, headers=top_header)
+    print_output(formatted, top_lines)
+
+    in_all = [w for w, s in filesets.items() if len(s) == file_count]
+    in_all.sort(key=sort_key)
+    maxw = max([len("Word")] + [len(w) for w in in_all]) if in_all else len("Word")
+    all_lines = []
+    print("\nWords that appear in ALL files:")
+    header = f"{'Word':>{maxw}}"
+    print(header); all_lines.append(header)
+    print("-" * len(header)); all_lines.append("-" * len(header))
+    for w in in_all:
+        line = f"{w:>{maxw}}"
+        print(line); all_lines.append(line)
+
+    only_one = []
+    for w, s in filesets.items():
+        if len(s) == 1:
+            file_num = next(iter(s))
+            only_one.append([w, file_num])
+    only_one.sort(key=lambda row: sort_key(row[0]))
+
+    single_lines = []
+    print("\nWords that appear in ONLY ONE file:")
+    formatted_single = align_table(only_one, headers=["Word", "File#"])
+    print_output(formatted_single, single_lines)
+
+    with open("ExtraLists.txt", "w", encoding="utf-8") as fh:
+        fh.write("Top Ten Words (by total occurrences):\n")
+        for ln in top_lines: fh.write(ln + "\n")
+        fh.write("\n")
+        fh.write("Words that appear in ALL files:\n")
+        for ln in all_lines: fh.write(ln + "\n")
+        fh.write("\n")
+        fh.write("Words that appear in ONLY ONE file:\n")
+        for ln in single_lines: fh.write(ln + "\n")
+
+
 # Main Program Logic
 
 def main():
     intro = ( #updated the intro for the SG2
-        "SG2: Word count, Search, Cordance, and Extra Lists\n"
+        "SG2: Word count, Search, Concordance, and Extra Lists\n"
         "This program reads up to 10 text files (.TXT), parses words (letters and optional internal hyphens),\n"
         "reports per-file totals and distinct counts, and lets you search words across the files (case-insensitive).\n"
-        "This program also adds a CORDANCE.TXT and ExtraLists.txt with three formated list"
+        "This program also adds a CORDANCE.TXT and ExtraLists.txt with three formated list.\n"
+        "These new features will be printed at the end of the users session and will go over\n"
+        "The CONCORDANCE.txt file will print the unique words found in the user selected files\n"
+        "and the exact file number, line number, and word position those words appear.\n"
+        "The extra list.txt will print three summaries of the top ten most common words,\n"
+        "The words that appear in every file, and words that appear in only one file.\n"
+        "The data from these will also be in .TXT files accordingly and will be places in the\n"
+        " same directory as the program. The files will be overwritten with each new program run."
     )
     print(intro)
     # Containers
@@ -440,8 +477,6 @@ def main():
         file_list.append(raw_fname)
         print(f"Loaded '{raw_fname}' with {len(words)} words ({len(set(normalize_word(w) for w in words))} distinct).")
 
-        openCFile(words) #stores words in alphabetival order
-        openEFile(words)
         # If reached max files, stop asking
         if len(file_list) >= MAX_FILES:
             print(f"Reached maximum of {MAX_FILES} files.")
@@ -501,8 +536,7 @@ def main():
 
     concordance, files_word_sets = build_concordance(file_list)              
     print_and_write_concordance(concordance)
-    word_in_every_file(file_list)
-    distinct_list(file_list)
+    write_extra_lists(concordance, file_list)
     
     # Finish
     prompt_input("Program finished. Press ENTER to exit.")
